@@ -1,0 +1,54 @@
+local TweenService = game:GetService("TweenService")
+local Debris = game:GetService("Debris")
+
+local Assets = game:GetService("ReplicatedStorage"):WaitForChild("Mandom"):WaitForChild("Assets")
+
+local MandomFX = {}
+
+function MandomFX.PlaySpawnSound(hrp)
+	local soundTemplate = Assets:FindFirstChild("MandomSpawnSound")
+	if not soundTemplate then return end
+
+	local s = soundTemplate:Clone()
+	s.Parent = hrp
+	s:Play()
+
+	Debris:AddItem(s, s.TimeLength + 0.2)
+end
+
+function MandomFX.SetAura(character, particleTemplate, state)
+	local limbs = character:GetChildren()
+
+	if state then
+		for _, part in ipairs(limbs) do
+			if part:IsA("BasePart") then
+				local emitter = particleTemplate:Clone()
+				emitter.Name = "MandomAura"
+				emitter.Parent = part
+			end
+		end
+	else
+		for _, v in ipairs(character:GetDescendants()) do
+			if v:IsA("ParticleEmitter") and v.Name == "MandomAura" then
+				v.Enabled = false
+				task.delay(0.2, function()
+					v:Destroy()
+				end)
+			end
+		end
+	end
+end
+
+function MandomFX.FadeModel(model, targetTransparency)
+	for _, obj in ipairs(model:GetDescendants()) do
+		if obj:IsA("BasePart") then
+			TweenService:Create(
+				obj,
+				TweenInfo.new(0.15),
+				{Transparency = targetTransparency}
+			):Play()
+		end
+	end
+end
+
+return MandomFX
