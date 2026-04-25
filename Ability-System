@@ -1,0 +1,21 @@
+local AbilitySystem = {}
+AbilitySystem.__index = AbilitySystem
+
+function AbilitySystem.new(character, recorder)	
+	local self = setmetatable({}, AbilitySystem)
+
+	self.Character = character
+	self.Recorder = recorder
+
+	return self
+end
+
+function AbilitySystem:TimeReverse(player)
+	if not self.Recorder or not next(self.Recorder.History) then
+		return
+	end
+
+	self.Recorder:Replay()
+end
+
+return AbilitySystem
