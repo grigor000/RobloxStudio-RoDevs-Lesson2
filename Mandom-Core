@@ -1,0 +1,70 @@
+local MandomCore = {}
+MandomCore.__index = MandomCore
+
+local AbilitySystem = require(script.Parent.AbilitySystem)
+local FX = require(script.Parent.MandomFX)
+
+local Assets = game:GetService("ReplicatedStorage"):WaitForChild("Mandom"):WaitForChild("Assets")
+
+function MandomCore.new(player, model, recorder)
+	local self = setmetatable({}, MandomCore)
+
+	self.Player = player
+	self.Character = player.Character or player.CharacterAdded:Wait()
+	self.Model = model:Clone()
+
+	self.Recorder = recorder
+	self.Ability = AbilitySystem.new(self.Character, self.Recorder)
+
+	return self
+end
+
+function MandomCore:Spawn()
+	if not self.Recorder.Enabled then
+		self.Recorder:Start()
+	end
+
+	local hrp = self.Character:FindFirstChild("HumanoidRootPart")
+	if not hrp then return end
+
+	self.Model.Parent = self.Character
+	self.Model:PivotTo(hrp.CFrame * CFrame.Angles(0, math.rad(115), 0))
+	 
+	for _, part in ipairs(self.Model:GetDescendants()) do
+		if part:IsA("BasePart") then
+			part.Transparency = 1
+		end
+	end 
+	
+	local weld = Instance.new("WeldConstraint")
+	weld.Part0 = self.Model.PrimaryPart
+	weld.Part1 = hrp
+	weld.Parent = self.Model.PrimaryPart
+
+	FX.PlaySpawnSound(hrp)
+
+	local aura = Assets:FindFirstChild("MandomAuraSpawn")
+	if aura then
+		FX.SetAura(self.Character, aura, true)
+	end
+
+	FX.FadeModel(self.Model, 0)
+end
+
+function MandomCore:Destroy()
+	self.Recorder:Stop()
+
+	local aura = Assets:FindFirstChild("MandomAuraSpawn")
+	if aura then
+		FX.SetAura(self.Character, aura, false)
+	end
+
+	if self.Model then
+		FX.FadeModel(self.Model, 1)
+		task.delay(0.2, function()
+			self.Model:Destroy()
+		end)
+	end
+end
+
+return MandomCore
