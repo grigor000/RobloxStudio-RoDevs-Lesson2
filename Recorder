@@ -96,7 +96,7 @@ end
 function Recorder:Replay()
 	workspace:SetAttribute("TimeReplay", true)
 
-	local RewDur = 1.4
+	local RewDur = 3
 
 	local SoundClone = Sound:Clone()
 	SoundClone.Parent = game.SoundService
