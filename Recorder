@@ -1,0 +1,227 @@
+local TweenService = game:GetService("TweenService")
+local Debris = game:GetService("Debris")
+local Players = game:GetService("Players")
+
+local Assets = game:GetService("ReplicatedStorage"):WaitForChild("Mandom"):WaitForChild("Lighting")
+local Sound = game:GetService("ReplicatedStorage"):WaitForChild("Mandom"):WaitForChild("Assets"):WaitForChild("MandomAbilitySound")
+
+local Recorder = {}
+Recorder.__index = Recorder
+
+function Recorder.new(character)
+	local self = setmetatable({}, Recorder)
+
+	self.Character = character
+	self.History = {}
+	self.Enabled = false
+	self.Step = 0.2
+	self.MaxTime = 6
+
+	return self
+end
+
+function Recorder:Start()
+	self.Enabled = true
+
+	task.spawn(function()
+		while self.Enabled do
+			for _, model in ipairs(Players:GetPlayers()) do
+				model = model.Character
+				if model and model:IsA("Model") then
+					local humanoid = model:FindFirstChildWhichIsA("Humanoid", true)
+					local hrp = model:FindFirstChild("HumanoidRootPart", true)
+
+					if humanoid and hrp then
+						local history = self.History[model]
+						if not history then
+							history = {}
+							self.History[model] = history
+						end
+
+						local snapshot = {
+							hp = humanoid.Health,
+							parts = {}
+						}
+
+						for _, part in ipairs(model:GetDescendants()) do
+							if part:IsA("BasePart") then
+								snapshot.parts[part] = part.CFrame
+							end
+						end
+
+						history[#history + 1] = snapshot
+
+						local max = math.floor(self.MaxTime / self.Step)
+						if #history > max then
+							table.remove(history, 1)
+						end
+					end
+				end
+			end
+
+			task.wait(self.Step)
+		end
+	end)
+end
+
+local function SafeClone(obj)
+	if not obj or not obj.Parent then return nil end
+	local ok, clone = pcall(function()
+		return obj:Clone()
+	end)
+	if ok then return clone end
+	return nil
+end
+
+local destroyList = {
+	ParticleEmitter = true,
+	PointLight = true,
+	SpotLight = true,
+	SurfaceLight = true,
+	Trail = true,
+	Beam = true,
+	Fire = true,
+	Smoke = true,
+	Highlight = true
+}
+
+local function CleanClone(obj)
+	for _, d in ipairs(obj:GetDescendants()) do
+		if destroyList[d.ClassName] then
+			d:Destroy()
+		end
+	end
+end
+
+function Recorder:Replay()
+	workspace:SetAttribute("TimeReplay", true)
+
+	local RewDur = 1.4
+
+	local SoundClone = Sound:Clone()
+	SoundClone.Parent = game.SoundService
+	SoundClone:Play()
+	Debris:AddItem(SoundClone, SoundClone.TimeLength + 0.1)
+
+	for _, obj in ipairs(Assets:GetChildren()) do
+		local clone = obj:Clone()
+		clone.Parent = game.Lighting
+		Debris:AddItem(clone, RewDur + 0.2)
+	end
+
+	local CC = Instance.new("ColorCorrectionEffect")
+	CC.TintColor = Color3.fromRGB(180, 200, 255)
+	CC.Saturation = -0.2
+	CC.Contrast = 0.1
+	CC.Brightness = -0.05
+	CC.Parent = game.Lighting
+
+	local Blur = Instance.new("BlurEffect")
+	Blur.Size = 13
+	Blur.Parent = game.Lighting
+
+	Debris:AddItem(CC, RewDur + 0.2)
+	Debris:AddItem(Blur, RewDur + 0.2)
+
+	task.delay(RewDur - 0.3, function()
+		TweenService:Create(CC, TweenInfo.new(0.3), {
+			Saturation = 0,
+			Brightness = 0
+		}):Play()
+	end)
+
+	for model, history in pairs(self.History) do
+		if model and model.Parent and #history > 5 then
+
+			local humanoid = model:FindFirstChildWhichIsA("Humanoid", true)
+			local hrp = model:FindFirstChild("HumanoidRootPart", true)
+
+			if not humanoid or not hrp then continue end
+
+			local steps = #history
+			local stepTime = RewDur / steps
+			local offset = 3
+
+			task.spawn(function()
+				local oldAnchored = {}
+
+				for _, p in ipairs(model:GetDescendants()) do
+					if p:IsA("BasePart") then
+						oldAnchored[p] = p.Anchored
+						p.Anchored = true
+					end
+				end
+
+				for i = steps, 1, -1 do
+					if not model.Parent then break end
+
+					local data = history[i]
+					humanoid.Health = data.hp
+
+					for part, cf in pairs(data.parts) do
+						if part and part.Parent then
+							local tween = TweenService:Create(
+								part,
+								TweenInfo.new(stepTime, Enum.EasingStyle.Linear),
+								{CFrame = cf}
+							)
+							tween:Play()
+
+							local j = i - offset
+							local old = history[j]
+
+							if i % 2 == 0 and old then
+								local oldCf = old.parts[part]
+
+								if oldCf then
+									local clone = SafeClone(part)
+									if clone then
+										clone.Parent = workspace
+
+										CleanClone(clone)
+
+										clone.Anchored = true
+										clone.CanCollide = false
+										clone.CanQuery = false
+										clone.CanTouch = false
+										clone.Material = Enum.Material.Neon
+										clone.Size *= 0.9
+										clone.Color = Color3.fromRGB(140, 180, 255)
+										clone.Transparency = 0.6
+										clone.CFrame = oldCf
+
+										TweenService:Create(clone, TweenInfo.new(0.4), {
+											Transparency = 1
+										}):Play()
+
+										Debris:AddItem(clone, 0.4)
+									end
+								end
+							end
+						end
+					end
+
+					task.wait(stepTime)
+				end
+
+				for part, state in pairs(oldAnchored) do
+					if part then
+						part.Anchored = state
+					end
+				end
+			end)
+		end
+	end
+
+	self.History = {}
+
+	task.delay(RewDur, function()
+		workspace:SetAttribute("TimeReplay", false)
+	end)
+end
+
+function Recorder:Stop()
+	self.Enabled = false
+end
+
+return Recorder
