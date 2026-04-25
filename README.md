@@ -1,3 +1,11 @@
+Mandom Ability
+
+A time-rewind ability that restores the game state to how it was 6 seconds earlier, including player positions and health.
+
+All movements and changes are smoothly reversed with visual and audio effects for a polished experience.
+
+Scripts:
+
 MandomServer - Controls the Mandom ability system and manages player state.
 
 MandomClient - Handles player input for Mandom abilities.
