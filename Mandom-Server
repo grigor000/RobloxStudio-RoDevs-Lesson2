@@ -1,0 +1,82 @@
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Recorder = require(ReplicatedStorage.Mandom.Modules.Recorder)
+local MandomCore = require(ReplicatedStorage.Mandom.Modules.MandomCore)
+
+local Events = ReplicatedStorage:WaitForChild("Mandom"):WaitForChild("Events")
+local Model = ReplicatedStorage:WaitForChild("Mandom"):WaitForChild("Model"):WaitForChild("Mandom")
+
+local EquipEvent = Events.MandomConnector
+local AbilityEvent = Events.MandomAbilityConnector
+
+local active = {}
+local recorders = {}
+local debounce = {}
+local cooldowns = {}
+
+local COOLDOWN_TIME = 20
+
+game.Players.PlayerAdded:Connect(function(player)
+	player.CharacterAdded:Connect(function(char)
+		local rec = Recorder.new(char)
+		recorders[player] = rec
+		rec:Start()
+	end)
+end)
+
+game.Players.PlayerRemoving:Connect(function(player)
+	recorders[player] = nil
+	active[player] = nil
+	cooldowns[player] = nil
+end)
+
+EquipEvent.OnServerEvent:Connect(function(player)
+	if debounce[player] then return end
+	debounce[player] = true
+
+	if active[player] then
+		active[player]:Destroy()
+		active[player] = nil
+	else
+		local rec = recorders[player]
+		if not rec then return end
+
+		if not rec.Enabled then
+			rec:Start()
+		end
+
+		local obj = MandomCore.new(player, Model, rec)
+		active[player] = obj
+		obj:Spawn()
+	end
+
+	task.delay(1, function()
+		debounce[player] = nil
+	end)
+end)
+
+AbilityEvent.OnServerEvent:Connect(function(player, key)
+	local obj = active[player]
+	if not obj then return end
+
+	if key == "TimeReverse" then
+		if workspace:GetAttribute("TimeReplay") then
+			return
+		end
+		
+		local now = tick()
+		local last = cooldowns[player] or 0
+
+		if now - last < COOLDOWN_TIME then
+			return
+		end
+
+		local rec = recorders[player]
+		if not rec or not next(rec.History) then
+			return
+		end
+
+		cooldowns[player] = now
+		obj.Ability:TimeReverse(player)
+	end
+end)
