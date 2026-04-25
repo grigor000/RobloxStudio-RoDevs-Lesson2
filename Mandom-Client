@@ -1,0 +1,20 @@
+local UIS = game:GetService("UserInputService")
+local RS = game:GetService("ReplicatedStorage")
+
+local Mandom = RS:WaitForChild("Mandom")
+local Events = Mandom:WaitForChild("Events")
+
+local Equip = Events:WaitForChild("MandomConnector")
+local Ability = Events:WaitForChild("MandomAbilityConnector")
+
+UIS.InputBegan:Connect(function(input, gp)
+	if gp then return end
+
+	if input.KeyCode == Enum.KeyCode.Q then
+		Equip:FireServer()
+	end
+
+	if input.KeyCode == Enum.KeyCode.G then
+		Ability:FireServer("TimeReverse")
+	end
+end)
