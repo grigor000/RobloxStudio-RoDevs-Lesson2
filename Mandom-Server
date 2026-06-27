@@ -14,7 +14,7 @@ local recorders = {}
 local debounce = {}
 local cooldowns = {}
 
-local COOLDOWN_TIME = 20
+local cd = 20
 
 game.Players.PlayerAdded:Connect(function(player)
 	player.CharacterAdded:Connect(function(char)
@@ -67,7 +67,7 @@ AbilityEvent.OnServerEvent:Connect(function(player, key)
 		local now = tick()
 		local last = cooldowns[player] or 0
 
-		if now - last < COOLDOWN_TIME then
+		if now - last < cd then
 			return
 		end
 
